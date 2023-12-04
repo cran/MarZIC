@@ -1,0 +1,144 @@
+---
+title: "Introduction to MarZIC"
+output: rmarkdown::html_vignette
+# output: rmarkdown::pdf_document
+
+vignette: >
+  %\VignetteIndexEntry{MarZIC}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+library(MarZIC)
+```
+
+
+# Introduction
+MarZIC estimates and tests the marginal mediation effects of zero-inflated compositional mediators. It can be applied to microbiome studies to estimate and test the marginal mediation effects of relative abundances (RA). Let $Y$, $M$ and $X$ denote the outcome, mediator (RA) and the independent variable respectively. And let $1_{(M>0)}$ denote the binary indicator variable indicating whether $M$ is positive. MarZIC decomposes the mediation effect into two components of which one is the total mediation effect going thru the continuous scale of the mediator, denoted by NIE$_1$ and the other is the mediation effect going thru the binary change (from zero to non-zero status) of the mediator, denoted by NIE$_2$. For a microbiome data, let $M_j$ denote the RA of the $j$th taxon/OTU/ASV. And let $Z$ denote confounder variable (if any) and $Z$ could contain multiple variables. The marginal outcome model for $Y$ is: 
+$$
+Y=\beta_0+\beta_1M_j+\beta_21_{M_j>0}+\beta_3X+\beta_4X1_{M_j>0}+\beta_5XM_j+\beta_6Z+\epsilon
+$$
+The mean of $M_j$ depends on $X$ and $Z$ through the following equation:
+$$
+\log \Bigg(\frac{E(M_j)}{1-E(M_j)}\Bigg)=\alpha_0 + \alpha_1X+\alpha_2Z
+$$
+Let $\Delta_j=P(M_j=0)$ which is the probability of a structural zero (ie, true zero). We use the following logistic model for this probability:  
+$$
+\log\bigg(\frac{\Delta_j}{1-\Delta_j}\bigg)=\gamma_0 + \gamma_1X+\gamma_2Z
+$$
+
+# Input for MarZIC() function
+Typically, users just need to feed the first six inputs to the function: `Experiment_dat`, `lib_name`, `y_name`, `x_name`, `conf_name` and `taxa_of_interest`.
+
+- `MicrobData` A dataset contains microbiome data. The microbiome data could be relative abundance or absolute abundance. Subjects with missing value will be removed during analysis.
+- `CovData` A dataset contains outcome, library size and covariates. 
+- `lib_name`      Name of library size variable.
+- `y_name`   Name of outcome variable
+- `x_name` Name of covariate of interest
+- `conf_name` Name of confounders Defaule is NULL, meaning no confounder.
+- `x4_inter` Whether to include the interaction term $\beta_4$. Default is TRUE.
+- `x5_inter` Whether to include the interaction term $\beta_5$. Default is TRUE.
+- `taxa_of_interest` A character vector for taxa names indicating taxa that should be analyzed. Default is "all", meaning all taxa should be included into analysis. 
+- `mediator_mix_range` Number of mixtures in mediator. Default is 1, meaning no mixture.
+- `transfer_to_RA` Logical variable indicating whether the microbiome data should be transferred into relative abundance. Default is TRUE. If FALSE, microbiome data will not be transferred (e.g., if the input data is already RA data).
+- `num_cores` Number of CPU cores to be used in parallelization task.
+- `adjust_method` P value adjustment method. Same as p.adjust in R. Default is "fdr".
+- `fdr_rate` FDR cutoff for significance. Default is 0.05.
+- `taxDropThresh` The threshold of dropping taxon due to high zero percentage. Default is 0.9, meaning taxon will be dropped for analysis if zero percentage is higher than 90\%.
+- `taxDropCount` The threshold of dropping taxon due to not enough non-zero observation counts. Default is 4 * (length(conf_name)+2), meaning taxon will be dropped if non-zero observation is less than four times of the total number of covariates (including the independent variable) plus intercept. 
+- `zero_prop_NIE2` The threshold of zero percentage for calculating NIE2. Default is 0.1, meaning NIE2 will be calculated for taxon with zero percentage greater than 10\%.
+- `zero_count_NIE2` The threshold of zero counts for calculating NIE2. Default is 4 * (length(conf_name)+2), meaning NIE2 will be calculated for taxon with zero counts greater than four times of number of covariates plus 1.
+- `SDThresh` The threshold of dropping taxon due to low coefficient of variation (CV) to avoid constant taxon. Default is 0.05, meaning any taxon has CV less than 0.05 will be dropped.
+- `SDx` The threshold of stopping analysis due to low CV of covariate of interest. Default is 0.05, meaning when CV of covariate of interest is less than 0.05, the analysis will be stopped.
+- `SDy` The threshold of stopping analysis due to low CV of outcome. Default is 0.05, meaning when CV of outcome is less than 0.05, the analysis will be stopped.
+
+# Output for IFAA() function
+
+A `list` of `4` datasets containing the results for `NIE1`, `NIE2`, `NDE`, and `NIE`.
+Each dataset has row representing each taxon, 6 columns for `Estimates`, `Standard Error`,
+`Lower bound for 95% Confidence Interval`, `Upper bound for 95% Confidence Interval`,
+`Adjusted p value`, `Significance indicator`.
+
+# Example
+```{r}
+## A make up example with 1 taxon and 100 subjects.
+set.seed(1)
+nSub <- 200
+nTaxa <- 10
+## generate covariate of interest X
+X <- rbinom(nSub, 1, 0.5)
+## generate confounders
+conf1<-rnorm(nSub)
+conf2<-rbinom(nSub,1,0.5)
+
+## generate mean of each taxon. All taxon are having the same mean for simplicity.
+mu <- exp(-5 + X + 0.1 * conf1 + 0.1 * conf2) / 
+  (1 + exp(-5 + X + 0.1 * conf1 + 0.1 * conf2))
+phi <- 10
+
+## generate true RA
+M_taxon<-t(sapply(mu,function(x) dirmult::rdirichlet(n=1,rep(x*phi,nTaxa))))
+
+P_zero <- exp(-3 + 0.3 * X + 0.1 * conf1 + 0.1 * conf2) / 
+  (1 + exp(-3 + 0.3 * X + 0.1 * conf1 + 0.1 * conf2))
+
+non_zero_ind <- t(sapply(P_zero,function(x) 1-rbinom(nTaxa,1,rep(x,nTaxa))))
+
+True_RA<-t(apply(M_taxon*non_zero_ind,1,function(x) x/sum(x)))
+
+## generate outcome Y based on true RA
+Y <- 1 + 100 * True_RA[,1] + 5 * (True_RA[,1] > 0) + X + conf1 + conf2 + rnorm(nSub)
+
+## library size was set to 10,000 for all subjects for simplicity.
+libsize <- 10000
+
+## generate observed RA
+observed_AA <- floor(M_taxon*libsize*non_zero_ind)
+
+observed_RA <- t(apply(observed_AA,1,function(x) x/sum(x)))
+colnames(observed_RA)<-paste0("rawCount",seq_len(nTaxa))
+CovData <- cbind(Y = Y, X = X, libsize = libsize, conf1 = conf1, conf2 = conf2)
+
+
+```
+Above steps could be ignored if a SummarizedExperiment object is already available. 
+Suppose we're interested in the mediation effects of `rawCount1`, `rawCount2`, and `rawCount3`, the analysis could be done as: 
+```{r}
+## run the analysis
+res <- MarZIC(
+  MicrobData = observed_RA,
+  CovData = CovData,
+  lib_name = "libsize",
+  y_name = "Y",
+  x_name = "X",
+  conf_name = c("conf1","conf2"),
+  taxa_of_interest = c("rawCount1","rawCount2","rawCount3"),
+  num_cores = 1,
+  mediator_mix_range = 1
+)
+
+
+```
+The results contain 4 datasets for NIE$_1$, NIE$_2$, NDE, NIE, respectively. The NIE$_1$, for example, could be extracted by:
+```{r}
+NIE1 <- res$NIE1_save
+```
+The significant result could be extracted by: 
+```{r}
+subset(NIE1, significance == TRUE)
+```
+From the result, we can find that `rawCount1` is an significant mediator of mediating the effect of $X$ on $Y$. 
+
+# Reference
+Wu et al.(2022) MarZIC: A Marginal Mediation Model for Zero-Inflated Compositional Mediators with Applications to Microbiome Data. Genes 2022, 13, 1049.
+
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
+```
