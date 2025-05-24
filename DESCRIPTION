@@ -2,7 +2,7 @@ Package: MarZIC
 Type: Package
 Title: Marginal Mediation Effects with Zero-Inflated Compositional
         Mediator
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(person(given = "Quran",
            family = "Wu",
            role = c("aut"),
@@ -25,12 +25,12 @@ Suggests: knitr, rmarkdown, RUnit, BiocGenerics, BiocStyle
 VignetteBuilder: knitr
 RdMacros: mathjaxr
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Encoding: UTF-8
 NeedsCompilation: yes
-Packaged: 2023-12-03 10:10:05 UTC; quranwu
+Packaged: 2025-05-24 20:53:06 UTC; 16037
 Author: Quran Wu [aut],
   Zhigang Li [aut, cre]
 Maintainer: Zhigang Li <lzg2151@gmail.com>
 Repository: CRAN
-Date/Publication: 2023-12-04 20:00:02 UTC
+Date/Publication: 2025-05-24 21:10:02 UTC

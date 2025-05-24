@@ -34,7 +34,7 @@ $$
 $$
 
 # Input for MarZIC() function
-Typically, users just need to feed the first six inputs to the function: `Experiment_dat`, `lib_name`, `y_name`, `x_name`, `conf_name` and `taxa_of_interest`.
+Typically, users just need to feed the first seven inputs to the function: `MicrobData`,`CovData`, `lib_name`, `y_name`, `x_name`, `conf_name` and `taxa_of_interest`.
 
 - `MicrobData` A dataset contains microbiome data. The microbiome data could be relative abundance or absolute abundance. Subjects with missing value will be removed during analysis.
 - `CovData` A dataset contains outcome, library size and covariates. 
@@ -58,7 +58,7 @@ Typically, users just need to feed the first six inputs to the function: `Experi
 - `SDx` The threshold of stopping analysis due to low CV of covariate of interest. Default is 0.05, meaning when CV of covariate of interest is less than 0.05, the analysis will be stopped.
 - `SDy` The threshold of stopping analysis due to low CV of outcome. Default is 0.05, meaning when CV of outcome is less than 0.05, the analysis will be stopped.
 
-# Output for IFAA() function
+# Output for MarZIC() function
 
 A `list` of `4` datasets containing the results for `NIE1`, `NIE2`, `NDE`, and `NIE`.
 Each dataset has row representing each taxon, 6 columns for `Estimates`, `Standard Error`,
@@ -107,7 +107,6 @@ CovData <- cbind(Y = Y, X = X, libsize = libsize, conf1 = conf1, conf2 = conf2)
 
 
 ```
-Above steps could be ignored if a SummarizedExperiment object is already available. 
 Suppose we're interested in the mediation effects of `rawCount1`, `rawCount2`, and `rawCount3`, the analysis could be done as: 
 ```{r}
 ## run the analysis
